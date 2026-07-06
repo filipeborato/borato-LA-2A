@@ -1,0 +1,78 @@
+# Custom Python Scripts
+screenshot.png
+cleanup_duplicates.py
+install_new_switches.py
+remove_bg.py
+update_svg.py
+open_and_capture.py
+take_screenshot.py
+update_toggle.py
+update_panel.py
+fix_shadows.py
+update_knob.py
+update_screw.py
+update_toggle_3d.py
+
+.venv/
+
+# Build outputs
+build*/
+Builds/
+build-ninja/    
+JuceLibraryCode/
+dist-win/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+compile_commands.json
+CTestTestfile.cmake
+Testing/
+_deps/
+
+# JUCE / generated IDE projects
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.xcodeproj/
+*.xcworkspace/
+DerivedData/
+
+# Plugin and binary artefacts
+*.vst3/
+*.component/
+*.appex/
+*.app/
+*.dll
+*.dylib
+*.so
+*.lib
+*.a
+*.pdb
+*.ilk
+*.exp
+
+# IDE/editor state
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.opensdf
+*.sdf
+
+# OS/temp files
+.DS_Store
+Thumbs.db
+*.tmp
+*.log
+.mimocode/
+.code
+.code/
+.claude
+.claude/
+.codex
+.codex/
+
