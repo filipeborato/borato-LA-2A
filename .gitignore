@@ -1,19 +1,10 @@
-# Custom Python Scripts
+# Custom Python Scripts (one-off/scratch tools, not real tests)
 screenshot.png
-cleanup_duplicates.py
-install_new_switches.py
-remove_bg.py
-update_svg.py
-open_and_capture.py
-take_screenshot.py
-update_toggle.py
-update_panel.py
-fix_shadows.py
-update_knob.py
-update_screw.py
-update_toggle_3d.py
+tests/scratch/
 
 .venv/
+__pycache__/
+.pytest_cache/
 
 # Build outputs
 build*/

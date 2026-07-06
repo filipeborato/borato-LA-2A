@@ -25,21 +25,38 @@ void JewelLightComponent::paint(juce::Graphics& g)
         g.fillEllipse(juce::Rectangle<float>(radius * 5.6f, radius * 5.6f).withCentre(centre));
     }
 
-    // 3. Chrome Bezel Ring (3D metal reflection)
+    // 3. Aro de níquel envelhecido (sem o estouro de cromo polido, para
+    //    casar com o metal gasto do resto do painel)
     const auto bezelArea = juce::Rectangle<float>(radius * 2.65f, radius * 2.65f).withCentre(centre);
-    juce::ColourGradient bezelGrad(juce::Colour(0xffebedf2), centre.x - radius * 1.3f, centre.y - radius * 1.3f,
-                                   juce::Colour(0xff15161a), centre.x + radius * 1.3f, centre.y + radius * 1.3f, false);
-    bezelGrad.addColour(0.20, juce::Colour(0xffffffff));
-    bezelGrad.addColour(0.42, juce::Colour(0xff7c818a));
+    juce::ColourGradient bezelGrad(juce::Colour(0xffc6c2b7), centre.x - radius * 1.3f, centre.y - radius * 1.3f,
+                                   juce::Colour(0xff17181b), centre.x + radius * 1.3f, centre.y + radius * 1.3f, false);
+    bezelGrad.addColour(0.20, juce::Colour(0xffdedacd));
+    bezelGrad.addColour(0.42, juce::Colour(0xff6f716d));
     bezelGrad.addColour(0.68, juce::Colour(0xff292b30));
-    bezelGrad.addColour(0.88, juce::Colour(0xffeceff4));
+    bezelGrad.addColour(0.88, juce::Colour(0xffa8a49a));
     g.setGradientFill(bezelGrad);
     g.fillEllipse(bezelArea);
+
+    // Desgaste do aro: granulado, micro-riscos e pátina na metade inferior
+    {
+        static const juce::Image noise = GraphicsHelpers::createNoiseTexture(96, 96, 0x4a4c4457u);
+        g.saveState();
+        juce::Path clip;
+        clip.addEllipse(bezelArea);
+        g.reduceClipRegion(clip);
+        GraphicsHelpers::drawPanelTexture(g, noise, bezelArea, 0.05f);
+        GraphicsHelpers::drawScratches(g, bezelArea, 0x4a575344u, 7, 0.28f);
+        juce::ColourGradient patina(juce::Colours::transparentBlack, centre.x, centre.y - radius,
+                                    juce::Colour(0x30281f14), centre.x, centre.y + radius * 1.5f, false);
+        g.setGradientFill(patina);
+        g.fillEllipse(bezelArea);
+        g.restoreState();
+    }
 
     // Inner dark groove in bezel
     g.setColour(juce::Colour(0xff08090a));
     g.fillEllipse(juce::Rectangle<float>(radius * 2.18f, radius * 2.18f).withCentre(centre));
-    g.setColour(juce::Colours::white.withAlpha(0.18f));
+    g.setColour(juce::Colours::white.withAlpha(0.10f));
     g.drawEllipse(juce::Rectangle<float>(radius * 2.42f, radius * 2.42f).withCentre(centre), 1.0f);
 
     // 4. Red Glass Lens
@@ -70,16 +87,36 @@ void JewelLightComponent::paint(juce::Graphics& g)
         g.strokePath(facet, juce::PathStrokeType(0.65f));
     }
 
-    // 6. Glass Highlights (specular light reflections)
-    // Primary specular highlight (top-left)
-    g.setColour(juce::Colours::white.withAlpha(on ? 0.85f : 0.45f));
+    // 6. Reflexos no vidro — atenuados: lente antiga, levemente fosca
+    // Especular primário (topo-esquerda), branco quente
+    g.setColour(juce::Colour(0xfff4efe2).withAlpha(on ? 0.55f : 0.25f));
     g.fillEllipse(juce::Rectangle<float>(radius * 0.28f, radius * 0.22f)
                       .withCentre(centre.translated(-radius * 0.35f, -radius * 0.42f)));
-                      
-    // Secondary bounce highlight (bottom-right edge)
-    g.setColour(juce::Colours::white.withAlpha(on ? 0.22f : 0.08f));
+
+    // Rebatida secundária na borda inferior-direita
+    g.setColour(juce::Colours::white.withAlpha(on ? 0.12f : 0.05f));
     g.drawEllipse(lens.reduced(1.5f), 1.0f);
-    
+
+    // Poeira e pequenas imperfeições acumuladas na cúpula de vidro
+    {
+        juce::Random dust((int64) 0x4a4c4454);
+        g.saveState();
+        juce::Path lensClip;
+        lensClip.addEllipse(lens.reduced(1.0f));
+        g.reduceClipRegion(lensClip);
+        for (int i = 0; i < 14; ++i)
+        {
+            const float a = dust.nextFloat() * juce::MathConstants<float>::twoPi;
+            const float r = std::sqrt(dust.nextFloat()) * radius * 0.85f;
+            const auto p = centre.getPointOnCircumference(r, a);
+            const float s = 0.8f + dust.nextFloat() * 1.6f;
+            g.setColour((i % 4 == 0 ? juce::Colours::white : juce::Colours::black)
+                            .withAlpha(0.05f + dust.nextFloat() * 0.10f));
+            g.fillEllipse(p.x, p.y, s, s);
+        }
+        g.restoreState();
+    }
+
     g.setColour(juce::Colour(0xff160000).withAlpha(0.62f));
     g.drawEllipse(lens, 1.0f);
 }

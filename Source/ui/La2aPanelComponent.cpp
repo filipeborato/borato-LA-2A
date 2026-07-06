@@ -74,9 +74,9 @@ void La2aPanelComponent::resized()
     gainKnob.setBounds(mapRect({ 82.0f, 500.0f, 360.0f, 360.0f }));
     peakKnob.setBounds(mapRect({ 790.0f, 700.0f, 290.0f, 280.0f }));
     meterSelector.setBounds(mapRect({ 540.0f, 818.0f, 104.0f, 104.0f }));
-    modeSwitch.setBounds(mapRect({ 1118.0f, 244.0f, 200.0f, 260.0f }));
+    modeSwitch.setBounds(mapRect({ 1153.0f, 289.5f, 130.0f, 169.0f }));
     jewelLight.setBounds(mapRect({ 1192.0f, 508.0f, 240.0f, 240.0f }));
-    powerSwitch.setBounds(mapRect({ 1212.0f, 706.0f, 200.0f, 250.0f }));
+    powerSwitch.setBounds(mapRect({ 1247.0f, 749.5f, 130.0f, 163.0f }));
     r37Knob.setBounds(mapRect({ 1108.0f, 712.0f, 40.0f, 40.0f }));
     rebuildBackgroundCache();
 }

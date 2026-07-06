@@ -121,6 +121,20 @@ Source/
 
 As coordenadas internas usam o canvas `1440 x 1080`. Texturas e scratches são determinísticos e pré-calculados fora de `paint()`. Os componentes interativos são separados das camadas decorativas.
 
+## Interface e comportamento do compressor
+
+- Os toggles usam renderização procedural de metal envelhecido, com reflexos direcionais, escovamento, micro-riscos e pátina. O posicionamento e a escala dos switches foram ajustados ao painel.
+- A jewel light recebeu aro de níquel envelhecido, reflexos mais suaves e imperfeições na lente para manter a estética vintage.
+- Em `Peak Reduction = 0`, sinais de entrada quentes ainda podem produzir redução de ganho. O controle atenua o sidechain ao mínimo, mas não desliga o circuito de compressão.
+
+Esse comportamento do DSP é coberto por um teste de regressão que carrega o VST3 Release e compara a redução de ganho nos extremos do controle:
+
+```powershell
+.venv\Scripts\python -m pytest tests/test_vu_gr_minimum.py -v -s
+```
+
+O teste requer `pytest`, `numpy` e `pedalboard`, e é ignorado automaticamente quando o VST3 Release ainda não foi compilado.
+
 ## Licença
 
 Distribuído sob a licença MIT. Consulte [LICENSE](LICENSE).

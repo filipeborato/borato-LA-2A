@@ -65,7 +65,12 @@ private:
     void sanitizeState() noexcept;
 
     // ---- Calibração (ajustar de ouvido) ----
-    static constexpr float sidechainDriveMinDb = -18.0f; // PR = 0 (sem compressão)
+    // PR = 0 não é "sem compressão": só atenua o sidechain em 18 dB, então
+    // sinais acima de ~-12 dBFS RMS ainda disparam o painel EL e produzem GR
+    // real (medido: ~0 dB até -15 dBFS, subindo a +2.85 dB em -3 dBFS RMS —
+    // ver tests/test_vu_gr_minimum.py). É intencional: no LA-2A real o Peak
+    // Reduction nunca "desliga" de fato a compressão para material bem quente.
+    static constexpr float sidechainDriveMinDb = -18.0f;
     static constexpr float sidechainDriveMaxDb = 40.0f;  // PR = 100
     static constexpr float elThresholdLin      = 0.02f;  // piso do painel EL
     static constexpr float elPanelDrive        = 0.9f;   // inclinação da curva do EL
