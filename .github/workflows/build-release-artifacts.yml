@@ -1,0 +1,341 @@
+name: Build Release Artifacts
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - release
+      - "release/**"
+      - "ci/**"
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# The product version lives in exactly one place: the `project(... VERSION ...)`
+# line in CMakeLists.txt. Each job reads it at runtime into LA2A_VERSION
+# (via GITHUB_ENV), so bumping the release is a one-line change in CMakeLists.txt
+# and every artifact name / release asset follows automatically.
+
+jobs:
+  build-windows:
+    name: Windows x64 Release
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve version from CMakeLists.txt
+        shell: bash
+        run: |
+          set -euo pipefail
+          ver=$(sed -nE 's/^[[:space:]]*project\(BoratoLA2A[[:space:]]+VERSION[[:space:]]+([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' CMakeLists.txt)
+          test -n "$ver"
+          echo "Resolved BORATO LA-2A version: $ver"
+          echo "LA2A_VERSION=$ver" >> "$GITHUB_ENV"
+
+      - name: Configure
+        run: >
+          cmake -S . -B build
+          -G "Visual Studio 17 2022" -A x64
+          -DBORATO_FETCH_JUCE=ON
+          -DBORATO_COPY_PLUGIN_AFTER_BUILD=OFF
+
+      - name: Build Release
+        run: >
+          cmake --build build --config Release
+          --target BoratoLA2A_VST3
+
+      - name: Package artifacts
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $root = "build\BoratoLA2A_artefacts\Release"
+          $dist = "dist"
+          New-Item -ItemType Directory -Force $dist | Out-Null
+
+          $base = "BoratoLA2A-v$env:LA2A_VERSION-Windows-x64"
+
+          # VST3 is a bundle folder; keep the parent so the zip extracts as
+          # "Borato LA-2A.vst3/...".
+          Compress-Archive -Path "$root\VST3\Borato LA-2A.vst3" `
+                           -DestinationPath "$dist\$base-VST3.zip"
+
+          $lines = @(
+            "# BORATO LA-2A Windows install (x64)"
+            ""
+            "The artifacts are unsigned development builds."
+            ""
+            "## Manual VST3"
+            ""
+            "Unzip ``$base-VST3.zip`` and copy ``Borato LA-2A.vst3`` to:"
+            ""
+            "``C:\Program Files\Common Files\VST3\``"
+          )
+          $lines | Out-File -Encoding utf8 "$dist\INSTALL-Windows-x64.md"
+
+          Get-ChildItem $dist
+
+      - name: Upload VST3
+        uses: actions/upload-artifact@v4
+        with:
+          name: BoratoLA2A-v${{ env.LA2A_VERSION }}-Windows-x64-VST3
+          path: dist/BoratoLA2A-v${{ env.LA2A_VERSION }}-Windows-x64-VST3.zip
+          if-no-files-found: error
+
+      - name: Upload install notes
+        uses: actions/upload-artifact@v4
+        with:
+          name: BoratoLA2A-v${{ env.LA2A_VERSION }}-Windows-x64-install-notes
+          path: dist/INSTALL-Windows-x64.md
+          if-no-files-found: error
+
+      - name: Attach assets to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          files: |
+            dist/BoratoLA2A-v${{ env.LA2A_VERSION }}-Windows-x64-VST3.zip
+            dist/INSTALL-Windows-x64.md
+
+  build-macos:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runs_on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Native runner per slice. Apple Silicon first shipped on macOS 11,
+          # so 11.0 is the justified minimum for the arm64 slice.
+          - name: macOS arm64 Release
+            runs_on: macos-15
+            architecture: arm64
+            artifact_suffix: macOS-arm64
+            deployment_target: "11.0"
+          # Intel slice on a native Intel runner; 10.15 (Catalina) is a safe min.
+          - name: macOS Intel Release
+            runs_on: macos-15-intel
+            architecture: x86_64
+            artifact_suffix: macOS-intel
+            deployment_target: "10.15"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve version from CMakeLists.txt
+        shell: bash
+        run: |
+          set -euo pipefail
+          ver=$(sed -nE 's/^[[:space:]]*project\(BoratoLA2A[[:space:]]+VERSION[[:space:]]+([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' CMakeLists.txt)
+          test -n "$ver"
+          echo "Resolved BORATO LA-2A version: $ver"
+          echo "LA2A_VERSION=$ver" >> "$GITHUB_ENV"
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Configure
+        run: >
+          cmake -S . -B build
+          -G Xcode
+          -DBORATO_FETCH_JUCE=ON
+          -DBORATO_COPY_PLUGIN_AFTER_BUILD=OFF
+          -DCMAKE_OSX_ARCHITECTURES=${{ matrix.architecture }}
+          -DCMAKE_OSX_DEPLOYMENT_TARGET=${{ matrix.deployment_target }}
+          -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED=NO
+          -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED=NO
+          -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY=""
+
+      - name: Build Release
+        run: cmake --build build --config Release --target BoratoLA2A_VST3
+
+      - name: Package artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          artifact_root="build/BoratoLA2A_artefacts/Release"
+          dist="dist"
+          artifact_suffix="${{ matrix.artifact_suffix }}"
+          architecture="${{ matrix.architecture }}"
+          mkdir -p "$dist"
+
+          vst3="$artifact_root/VST3/Borato LA-2A.vst3"
+          test -d "$vst3"
+
+          base="BoratoLA2A-v${LA2A_VERSION}-${artifact_suffix}"
+
+          ditto -c -k --keepParent "$vst3" "$dist/${base}-VST3.zip"
+
+          cat > "$dist/INSTALL-${artifact_suffix}.md" <<'EOF'
+          # BORATO LA-2A macOS install (@ARCH@)
+
+          The VST3 artifact is an unsigned development build.
+
+          ## VST3
+
+          Unzip `BoratoLA2A-v@VER@-@SUFFIX@-VST3.zip` and copy `Borato LA-2A.vst3` to:
+
+          ```text
+          ~/Library/Audio/Plug-Ins/VST3/
+          ```
+
+          ## Gatekeeper note
+
+          The unsigned artifact may be blocked by macOS the first time. If needed, remove quarantine after unzipping:
+
+          ```bash
+          xattr -dr com.apple.quarantine "Borato LA-2A.vst3"
+          ```
+          EOF
+
+          # Fill in placeholders (kept out of the quoted heredoc so the markdown
+          # code fences survive verbatim).
+          sed -i '' \
+            -e "s/@VER@/${LA2A_VERSION}/g" \
+            -e "s/@SUFFIX@/${artifact_suffix}/g" \
+            -e "s/@ARCH@/${architecture}/g" \
+            "$dist/INSTALL-${artifact_suffix}.md"
+
+          ls -la "$dist"
+
+      - name: Upload VST3
+        uses: actions/upload-artifact@v4
+        with:
+          name: BoratoLA2A-v${{ env.LA2A_VERSION }}-${{ matrix.artifact_suffix }}-VST3
+          path: dist/BoratoLA2A-v${{ env.LA2A_VERSION }}-${{ matrix.artifact_suffix }}-VST3.zip
+          if-no-files-found: error
+
+      - name: Upload install notes
+        uses: actions/upload-artifact@v4
+        with:
+          name: BoratoLA2A-v${{ env.LA2A_VERSION }}-${{ matrix.artifact_suffix }}-install-notes
+          path: dist/INSTALL-${{ matrix.artifact_suffix }}.md
+          if-no-files-found: error
+
+      - name: Attach assets to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          files: |
+            dist/BoratoLA2A-v${{ env.LA2A_VERSION }}-${{ matrix.artifact_suffix }}-VST3.zip
+            dist/INSTALL-${{ matrix.artifact_suffix }}.md
+
+  build-ubuntu:
+    name: Ubuntu Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve version from CMakeLists.txt
+        shell: bash
+        run: |
+          set -euo pipefail
+          ver=$(sed -nE 's/^[[:space:]]*project\(BoratoLA2A[[:space:]]+VERSION[[:space:]]+([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' CMakeLists.txt)
+          test -n "$ver"
+          echo "Resolved BORATO LA-2A version: $ver"
+          echo "LA2A_VERSION=$ver" >> "$GITHUB_ENV"
+
+      - name: Install JUCE Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            ninja-build \
+            pkg-config \
+            libasound2-dev \
+            libjack-jackd2-dev \
+            libfreetype6-dev \
+            libfontconfig1-dev \
+            libx11-dev \
+            libxcomposite-dev \
+            libxcursor-dev \
+            libxext-dev \
+            libxinerama-dev \
+            libxrandr-dev \
+            libxrender-dev
+
+      - name: Configure
+        run: >
+          cmake -S . -B build
+          -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DBORATO_FETCH_JUCE=ON
+          -DBORATO_COPY_PLUGIN_AFTER_BUILD=OFF
+
+      - name: Build Release
+        run: cmake --build build --target BoratoLA2A_VST3
+
+      - name: Package artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          artifact_root="build/BoratoLA2A_artefacts/Release"
+          dist="dist"
+          mkdir -p "$dist"
+
+          vst3="$artifact_root/VST3/Borato LA-2A.vst3"
+          test -d "$vst3"
+
+          base="BoratoLA2A-v${LA2A_VERSION}-Ubuntu"
+
+          tar -czf "$dist/${base}-VST3.tar.gz" -C "$artifact_root/VST3" "Borato LA-2A.vst3"
+
+          cat > "$dist/INSTALL-Ubuntu.md" <<'EOF'
+          # BORATO LA-2A Ubuntu install
+
+          These artifacts are unsigned development builds.
+
+          ## VST3
+
+          Extract `BoratoLA2A-v@VER@-Ubuntu-VST3.tar.gz` and copy `Borato LA-2A.vst3` to:
+
+          ```text
+          ~/.vst3/
+          ```
+
+          Then rescan plugins in your DAW.
+          EOF
+
+          sed -i -e "s/@VER@/${LA2A_VERSION}/g" "$dist/INSTALL-Ubuntu.md"
+
+          ls -la "$dist"
+
+      - name: Upload VST3
+        uses: actions/upload-artifact@v4
+        with:
+          name: BoratoLA2A-v${{ env.LA2A_VERSION }}-Ubuntu-VST3
+          path: dist/BoratoLA2A-v${{ env.LA2A_VERSION }}-Ubuntu-VST3.tar.gz
+          if-no-files-found: error
+
+      - name: Upload install notes
+        uses: actions/upload-artifact@v4
+        with:
+          name: BoratoLA2A-v${{ env.LA2A_VERSION }}-Ubuntu-install-notes
+          path: dist/INSTALL-Ubuntu.md
+          if-no-files-found: error
+
+      - name: Attach assets to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          files: |
+            dist/BoratoLA2A-v${{ env.LA2A_VERSION }}-Ubuntu-VST3.tar.gz
+            dist/INSTALL-Ubuntu.md

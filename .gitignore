@@ -1,5 +1,4 @@
 # Custom Python Scripts (one-off/scratch tools, not real tests)
-screenshot.png
 tests/scratch/
 
 .venv/

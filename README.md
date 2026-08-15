@@ -1,19 +1,30 @@
 # Borato LA-2A
 
-Plugin de áudio VST3/Standalone da Borato Company, construído com C++20, JUCE e CMake. A interface traduz o mock original de um painel vintage para renderização procedural nativa com `juce::Graphics`; HTML, JavaScript, WebView e SVG não são usados em runtime.
+![Borato LA-2A Plugin Interface](screenshot.png)
 
-## Requisitos
+A high-performance **Teletronix LA-2A** optical compressor emulator (VST3/Standalone) built with **C++20**, **JUCE 8**, and **CMake**. 
 
-- CMake 3.22 ou mais recente
-- JUCE 8.0.12 ou compatível
-- Compilador C++20
-- Windows: Visual Studio 2022/2026 com o workload **Desktop development with C++**
+Featuring an authentic vintage hardware panel interface rendered 100% procedurally with native `juce::Graphics` — zero WebView, HTML, JavaScript, or SVG runtime overhead.
 
-O projeto é generator-agnostic e não fixa uma versão do MSVC. O CMake deve selecionar o toolset instalado automaticamente.
+## Features
 
-## Build no Windows
+- **Authentic LA-2A Emulation**: Faithfully models the program-dependent optical gain reduction, two-stage release curve, and subtle tube saturation/analog warmth of the classic Teletronix LA-2A leveling amplifier.
+- **100% Procedural Vector UI**: High-resolution GUI rendered entirely in real-time via `juce::Graphics` (brushed metal, aging patina, dynamic reflections, vintage knobs, VU meter, and interactive switches).
+- **Zero Web Tech Runtime Overhead**: Built purely with native C++20 and JUCE components.
+- **Cross-Platform & Generator-Agnostic**: Clean CMake configuration for Windows (Visual Studio 2022 / 2026), macOS, and Linux.
 
-Com JUCE em `C:\JUCE` e Visual Studio 2026:
+## Requirements
+
+- **CMake** 3.22 or newer
+- **JUCE** 8.0.12 or compatible
+- **C++20** compliant compiler
+- **Windows**: Visual Studio 2022/2026 with **Desktop development with C++** workload
+
+The project is generator-agnostic and does not hardcode an MSVC toolset version. CMake will automatically detect your installed toolset.
+
+## Building on Windows
+
+With JUCE located at `C:\JUCE` and Visual Studio 2026:
 
 ```powershell
 cmake -S . -B build -G "Visual Studio 18 2026" -A x64 `
@@ -23,72 +34,70 @@ cmake -S . -B build -G "Visual Studio 18 2026" -A x64 `
 cmake --build build --config Release
 ```
 
-Para Visual Studio 2022, troque apenas o generator:
+For Visual Studio 2022, simply change the generator:
 
 ```powershell
 cmake -S . -B build-vs2022 -G "Visual Studio 17 2022" -A x64 `
   -DBORATO_JUCE_SOURCE_DIR=C:/JUCE
 ```
 
-Não adicione `-T v142`, `-T v143` ou `-T v145` ao fluxo normal. Fixar o toolset torna o build dependente de uma instalação específica e prejudica builds futuros e GitHub Actions.
+Do not add `-T v142`, `-T v143`, or `-T v145` flags to the standard workflow. Hardcoding toolsets ties builds to specific local installations and breaks CI workflows.
 
-Artefatos Release:
+Build Artifacts:
 
 ```text
 build/BoratoLA2A_artefacts/Release/Standalone/Borato LA-2A.exe
 build/BoratoLA2A_artefacts/Release/VST3/Borato LA-2A.vst3
 ```
 
-## Localização do JUCE
+## Locating JUCE
 
-O CMake procura JUCE nesta ordem:
+CMake searches for JUCE in the following priority order:
 
-1. `-DBORATO_JUCE_SOURCE_DIR=/caminho/para/JUCE`
-2. checkout local em `C:/JUCE`
-3. `find_package(JUCE)`
-4. download via `-DBORATO_FETCH_JUCE=ON`
+1. `-DBORATO_JUCE_SOURCE_DIR=/path/to/JUCE`
+2. Local directory at `C:/JUCE`
+3. System `find_package(JUCE)`
+4. Automatic download via `-DBORATO_FETCH_JUCE=ON`
 
-O último modo é apropriado para CI:
+The last option is ideal for CI pipelines:
 
 ```bash
 cmake -S . -B build -DBORATO_FETCH_JUCE=ON
 cmake --build build --config Release
 ```
 
-## Renderer OpenGL opcional
+## Optional OpenGL Renderer
 
-O renderer padrão do JUCE é a configuração principal e deve funcionar sem GPU dedicada:
+The default JUCE renderer is the primary configuration and operates without dedicated GPU requirements:
 
 ```powershell
 -DBORATO_USE_OPENGL_RENDERER=OFF
 ```
 
-Para testar o renderer OpenGL:
+To enable and test the OpenGL hardware-accelerated renderer:
 
 ```powershell
 -DBORATO_USE_OPENGL_RENDERER=ON
 ```
 
-OpenGL altera somente o backend gráfico; a interface e os caches procedurais permanecem os mesmos.
+OpenGL toggles the rendering backend only; the UI layout and procedural caching remain identical.
 
-## Troubleshooting do Visual Studio
+## Visual Studio Troubleshooting
 
 ### `No CMAKE_C_COMPILER could be found`
 
-Consulte primeiro `build/CMakeFiles/CMakeConfigureLog.yaml`. A mensagem resumida do CMake pode esconder o erro real do MSBuild.
+First check `build/CMakeFiles/CMakeConfigureLog.yaml`. The high-level CMake output can conceal the actual MSBuild diagnostic error.
 
-Durante o desenvolvimento deste projeto, o ambiente automatizado continha simultaneamente variáveis chamadas `PATH` e `Path`. O MSBuild 18.7 recusou iniciar `CL.exe` e reportou:
+If your environment contains duplicate environment variables (e.g., both `PATH` and `Path`), MSBuild may fail with:
 
 ```text
-MSB6001: O item já foi adicionado.
-Chave contida no dicionário: 'PATH'; chave sendo adicionada: 'Path'
+MSB6001: The item has already been added.
+Key in dictionary: 'PATH' Key being added: 'Path'
 ```
 
-Isso não indicava ausência do compilador nem exigia um toolset antigo. O Visual Studio selecionou normalmente o toolset `v145` depois que o processo foi executado com um bloco de ambiente limpo.
+This indicates duplicate environment variables rather than a missing compiler or outdated toolset. Clean environment variables or use a clean PowerShell/Developer Command Prompt to resolve this.
 
-Uma atualização do Visual Studio pode ter tornado essa validação mais estrita, mas o problema confirmado é a duplicidade de nomes no ambiente. Em um PowerShell ou Developer Command Prompt normal, o comando padrão acima deve funcionar sem ajustes.
-
-Verificações úteis:
+Useful diagnostic commands:
 
 ```powershell
 cmake --help
@@ -96,14 +105,14 @@ cmake --version
 Get-ChildItem Env: | Where-Object Name -Match '^(Path|PATH)$'
 ```
 
-Se o build directory guardar dados de um Visual Studio removido ou atualizado, use um diretório novo:
+If building after updating or removing Visual Studio versions, clear the build directory:
 
 ```powershell
 cmake -S . -B build-clean -G "Visual Studio 18 2026" -A x64 `
   -DBORATO_JUCE_SOURCE_DIR=C:/JUCE
 ```
 
-## Organização
+## Project Structure
 
 ```text
 Source/
@@ -119,22 +128,26 @@ Source/
     GraphicsHelpers.*
 ```
 
-As coordenadas internas usam o canvas `1440 x 1080`. Texturas e scratches são determinísticos e pré-calculados fora de `paint()`. Os componentes interativos são separados das camadas decorativas.
+Internal layout coordinates use a standard `1440 x 1080` canvas. Textures and scratches are procedurally generated outside of the main `paint()` loop for optimal frame rates.
 
-## Interface e comportamento do compressor
+## UI & Compressor Behavior
 
-- Os toggles usam renderização procedural de metal envelhecido, com reflexos direcionais, escovamento, micro-riscos e pátina. O posicionamento e a escala dos switches foram ajustados ao painel.
-- A jewel light recebeu aro de níquel envelhecido, reflexos mais suaves e imperfeições na lente para manter a estética vintage.
-- Em `Peak Reduction = 0`, sinais de entrada quentes ainda podem produzir redução de ganho. O controle atenua o sidechain ao mínimo, mas não desliga o circuito de compressão.
+- **Toggle Switches**: Procedural aged metal rendering with directional highlights, brushed texturing, micro-scratches, and subtle patina.
+- **Jewel Light**: Aged nickel bezel with soft lens reflections and realistic glass imperfections.
+- **Minimum Compression**: At `Peak Reduction = 0`, hot input signals may still trigger slight gain reduction, modeling the authentic behavior where the sidechain circuit is attenuated but never fully bypassed.
 
-Esse comportamento do DSP é coberto por um teste de regressão que carrega o VST3 Release e compara a redução de ganho nos extremos do controle:
+This DSP behavior is validated by regression tests loading the VST3 Release binary and comparing gain reduction across control extremes:
 
 ```powershell
 .venv\Scripts\python -m pytest tests/test_vu_gr_minimum.py -v -s
 ```
 
-O teste requer `pytest`, `numpy` e `pedalboard`, e é ignorado automaticamente quando o VST3 Release ainda não foi compilado.
+*Note: Requires `pytest`, `numpy`, and `pedalboard`. Automatically skipped if the VST3 Release binary is not built.*
 
-## Licença
+## Documentation
 
-Distribuído sob a licença MIT. Consulte [LICENSE](LICENSE).
+For detailed operating instructions, control reference, signal flow, and VU meter alignment details, see the [User Manual](MANUAL.md).
+
+## License
+
+Distributed under the MIT License. See [LICENSE](LICENSE) for details.
