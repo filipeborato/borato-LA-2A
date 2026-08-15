@@ -1,142 +1,128 @@
-# Manual do Borato LA-2A
+# Borato LA-2A User Manual
 
-## Visão geral
+## Overview
 
-O Borato LA-2A é um compressor óptico de topologia feedback inspirado no LA-2A. Combina redução de ganho dependente do programa, release em dois estágios e coloração analógica ajustável.
+The **Borato LA-2A** is a feedback-topology optical leveling amplifier inspired by the classic Teletronix LA-2A. It combines program-dependent gain reduction, a two-stage release curve, and adjustable analog coloration.
 
-Aceita áudio mono ou estéreo. Em estéreo, os canais são vinculados pelo maior valor instantâneo entre os sidechains, preservando a imagem estéreo durante a redução de ganho.
+It processes mono or stereo audio signals. In stereo mode, channels are linked by the maximum peak value between both sidechains, preserving stereo imaging during gain reduction.
 
-## Início rápido
+## Quick Start
 
-1. Ligue `Power` e selecione `Compress`.
-2. Coloque o medidor em `GR`.
-3. Aumente `Peak Reduction` até obter a redução desejada.
-4. Ajuste `Gain` para comparar o volume processado com o original.
-5. Use `Mix` para compressão paralela, se necessário.
-6. Confira picos e loudness na DAW. Leia a seção `+4, +10 e GR` antes de usar o VU para calibração absoluta.
+1. Switch `Power` **ON** and set mode to `Compress`.
+2. Set the VU Meter mode to `GR` (Gain Reduction).
+3. Increase `Peak Reduction` until achieving the desired gain reduction.
+4. Adjust `Gain` (makeup gain) to match the dry and processed volume.
+5. Use `Mix` for parallel compression if needed.
+6. Check output peaks and loudness in your DAW. Read the `+4, +10, and GR` section before using the VU meter for absolute level calibration.
 
-Como ponto de partida, procure 2 a 5 dB de redução em vocais, baixo ou instrumentos sustentados. A resposta depende do sinal que alimenta a célula óptica.
+As a starting point, aim for **2 to 5 dB** of gain reduction on vocals, bass, or sustained instruments. Response depends heavily on the input signal feeding the optical cell.
 
-## Fluxo de sinal
+## Signal Flow
 
 ```text
-Entrada → Input → estágio de entrada → atenuação T4 → Gain
-        → válvula → transformador de saída → Mix → Output → Saída
+Input → Input Trim → Input Stage → T4 Attenuation → Gain Stage
+      → Tube Stage → Output Transformer → Mix → Output Trim → Output
 ```
 
-O sidechain é feedback: observa a saída comprimida do sample anterior, antes de `Gain`. Assim, `Peak Reduction` controla a compressão e `Gain` repõe o nível sem realimentar diretamente o detector.
+The sidechain employs a feedback topology: it taps the compressed output from the previous sample prior to the `Gain` makeup stage. Thus, `Peak Reduction` controls compression intensity while `Gain` restores level without directly feeding back into the detector.
 
-## Controles
+## Controls Reference
 
-| Controle | Faixa | Padrão | Função |
+| Control | Range | Default | Function |
 |---|---:|---:|---|
-| Input | -24 a +24 dB | 0 dB | Nível antes do circuito; também altera quanto o compressor reage. Disponível ao host. |
-| Peak Reduction | 0 a 100 | 35 | Drive do sidechain. Valores maiores geram mais redução. Não é ganho de entrada. |
-| Gain | -10 a +40 dB | 0 dB | Compensação depois da atenuação óptica. |
-| Meter | +10, +4 ou GR | GR | Escolhe somente a leitura da agulha; não altera o áudio. |
-| Mode | Compress ou Limit | Compress | `Limit` usa curva mais íngreme e permite mais redução. |
-| Power | Off/On | On | Em `Off`, aplica bypass direto e estaciona a agulha à esquerda. |
-| R37 / HF Sensitivity | 0 a 1 | 0,35 | Ênfase de agudos apenas no sidechain. O parafuso `R37` é interativo. |
-| Analog | 0 a 1 | 0,5 | Coloração dos estágios analógicos; 0 é transparente. Disponível ao host. |
-| Mix | 0 a 100% | 100% | Mistura o caminho comprimido com o sinal depois de `Input`. |
-| Output | -24 a +24 dB | 0 dB | Trim final depois de `Mix`. Disponível ao host. |
+| Input | -24 to +24 dB | 0 dB | Input level trim before processing; affects compressor drive. Automatable. |
+| Peak Reduction | 0 to 100 | 35 | Sidechain drive. Higher values yield more gain reduction. |
+| Gain | -10 to +40 dB | 0 dB | Makeup gain applied after optical attenuation. |
+| Meter | +10, +4, or GR | GR | Selects VU needle display mode; does not alter audio processing. |
+| Mode | Compress or Limit | Compress | `Limit` applies a steeper curve and permits higher maximum reduction. |
+| Power | Off/On | On | In `Off` position, engages hard bypass and parks needle to the left. |
+| R37 / HF Sensitivity | 0 to 1 | 0.35 | High-frequency emphasis in the sidechain detector. Interactive screw control. |
+| Analog | 0 to 1 | 0.5 | Analog stage saturation/coloration (0 = transparent). Automatable. |
+| Mix | 0 to 100% | 100% | Dry/Wet blend between uncompressed input and compressed signal. |
+| Output | -24 to +24 dB | 0 dB | Final output level trim after `Mix`. Automatable. |
 
 ### Peak Reduction
 
-O mapeamento é quadrático para dar mais resolução na parte baixa. Mesmo em `0`, o sidechain recebe sinal atenuado; ele não é desligado. Material muito quente pode produzir compressão residual de alguns decibéis. Esse comportamento é coberto por teste de regressão.
+Mapped quadratically to provide enhanced control resolution in the lower range. Even at `0`, the sidechain receives an attenuated signal rather than being completely disconnected. High-level input signals may generate residual gain reduction, matching the original hardware behavior.
 
-### Compress e Limit
+### Compress vs. Limit
 
-- `Compress`: knee suave e redução máxima modelada de 24 dB.
-- `Limit`: curva mais íngreme e redução máxima modelada de 32 dB.
+- **Compress**: Soft-knee curve with a modeled maximum gain reduction of ~24 dB.
+- **Limit**: Steeper knee curve with a modeled maximum gain reduction of ~32 dB.
 
-Esses são limites internos do modelo, não ratios fixos. A resposta é não linear e dependente do programa.
+These represent internal model boundaries rather than fixed compression ratios. Response remains non-linear and program-dependent.
 
 ### R37 / HF Sensitivity
 
-O R37 aplica um high-shelf ao sidechain, sem equalizar diretamente o áudio:
+The R37 control applies a high-shelf filter to the sidechain without directly EQing the audio signal:
 
-- Em `0`, a detecção fica praticamente full-band.
-- Ao aumentar, agudos acionam mais compressão e graves acionam relativamente menos.
-- Em `1`, a ênfase chega a aproximadamente 10 dB em torno de 1,8 kHz, com compensação de nível.
+- At `0`, detection is essentially full-band.
+- Increasing R37 causes high frequencies to trigger more compression relative to low frequencies.
+- At `1`, emphasis reaches approximately +10 dB around 1.8 kHz with level compensation.
 
-Use valores maiores para controlar sibilância, pratos ou guitarras brilhantes.
+Use higher settings to tame sibilance, harsh drum cymbals, or overly bright acoustic guitars.
 
-## Entendendo +4, +10 e GR
+## Understanding +4, +10, and GR
 
-### Significado no equipamento analógico
+### Analog Hardware Context
 
-`+4` e `+10` são calibrações do medidor de saída, não ganho adicional:
+`+4` and `+10` represent output meter calibration reference points, not audio gain stages:
 
-| Posição | Significado analógico |
+| Position | Analog Hardware Meaning |
 |---|---|
-| +4 | Uma saída de +4 dBu deve indicar 0 VU. |
-| +10 | Uma saída de +10 dBu deve indicar 0 VU. Para o mesmo sinal, a agulha fica 6 dB abaixo de +4. |
-| GR | Mostra quantos decibéis o compressor reduz. |
+| +4 | An output level of +4 dBu registers as 0 VU (+4 dBu studio standard). |
+| +10 | An output level of +10 dBu registers as 0 VU (6 dB lower sensitivity than +4). |
+| GR | Displays gain reduction in decibels (dB). |
 
-`dBu` mede tensão analógica; `dBFS` mede nível digital relativo ao teto. Não existe conversão universal sem escolher um nível de alinhamento.
+### Current Borato LA-2A Metering Behavior
 
-### Comportamento atual do Borato LA-2A
+The relative 6 dB offset between `+4` and `+10` is modeled accurately and switching modes does not alter audio processing. However, absolute digital calibration uses full-scale peak reference:
 
-O deslocamento relativo de 6 dB está correto e o seletor não entra no processamento de áudio. A calibração absoluta digital, porém, ainda não representa uma referência analógica utilizável:
-
-| Posição | Cálculo atual | 0 VU atual |
+| Position | Internal Calculation | Current 0 VU Mark |
 |---|---:|---:|
-| +4 | saída em dBFS | 0 dBFS |
-| +10 | saída em dBFS - 6 dB | +6 dBFS |
-| GR | redução com sinal invertido para a escala | 0 dB de redução |
+| +4 | Output in dBFS | 0 dBFS |
+| +10 | Output in dBFS - 6 dB | +6 dBFS |
+| GR | Inverted Gain Reduction | 0 dB reduction |
 
-Exemplo: com saída de `-12 dBFS`, `+4` aponta para `-12` e `+10` para `-18`. A troca muda apenas a agulha.
+Example: With an output of `-12 dBFS`, `+4` indicates `-12` and `+10` indicates `-18`.
 
-Na prática, use `GR` para ajustar a compressão e os medidores da DAW para nível absoluto. `+4` e `+10` servem hoje para comparação relativa, não para alinhamento confiável de 0 VU.
+In practice, use `GR` mode to monitor gain reduction and use your DAW peak/RMS meters for absolute output metering.
 
-Uma calibração digital convencional poderia definir `0 VU = -18 dBFS` em `+4`; assim, 0 VU em `+10` corresponderia a `-12 dBFS`. Esse alinhamento não está implementado.
+### Meter Ballistics
 
-### Balística
+The output meter utilizes an absolute peak envelope with ~200 ms response time and additional visual smoothing. In stereo mode, it displays the higher of the two channels. In `GR` mode, needle ballistics are independently smoothed.
 
-A saída usa envelope de pico absoluto com suavização de aproximadamente 200 ms e suavização visual adicional. É um indicador lento, mas não implementa integralmente um VU analógico RMS. Em estéreo, mostra o maior canal.
+## Program-Dependent Release
 
-Em `GR`, a leitura é suavizada separadamente. Sete decibéis de redução levam a agulha à marca `-7`.
+The simulated T4 optical cell incorporates:
 
-## Release dependente do programa
+- ~10 ms attack time
+- ~60 ms initial fast recovery
+- Adaptive slow tail recovery between 0.5 and 5.0 seconds
+- Optical memory effect (slower release after sustained heavy compression)
 
-A célula T4 simulada combina:
+## Recommended Usage
 
-- ataque de aproximadamente 10 ms;
-- recuperação rápida de aproximadamente 60 ms;
-- cauda lenta adaptativa entre 0,5 e 5 segundos;
-- memória que torna o release mais lento após compressão sustentada.
+### Vocals
+1. Select `Compress` and set meter to `GR`.
+2. Adjust `Peak Reduction` for 2–4 dB reduction on average phrases.
+3. Restore level using `Gain`.
+4. Optionally increase `R37` slightly if sibilance is present.
 
-A agulha e o áudio podem demorar a voltar ao repouso depois de trechos densos. Isso faz parte do modelo.
+### Bass
+1. Start in `Compress` mode with low `R37` and `Mix` at 100%.
+2. Increase `Peak Reduction` while keeping transient note punch intact.
+3. If compression builds up excessively between notes, decrease `Peak Reduction` or input level.
 
-## Procedimentos recomendados
+### Parallel Compression
+1. Dial in heavier compression than normally required.
+2. Dial back `Mix` (e.g., 40–60%) to blend transient punch back in.
+3. Adjust `Output` trim to balance overall plugin output.
 
-### Vocal
+## Safety & Gain Staging
 
-1. Selecione `Compress` e `GR`.
-2. Ajuste `Peak Reduction` para frases comuns reduzirem 2 a 4 dB.
-3. Reponha o volume com `Gain`.
-4. Se necessário, aumente moderadamente o R37 para sibilância.
-5. Compare em loudness semelhante.
+`Input`, `Gain`, and `Output` can combine to produce substantial output gain. The plugin does not feature an output brickwall limiter. Reduce monitor levels before testing extreme settings.
 
-### Baixo
+## Reference
 
-1. Comece em `Compress`, R37 baixo e `Mix` em 100%.
-2. Aumente `Peak Reduction` sem eliminar o ataque.
-3. Se o release acumular entre notas, reduza `Peak Reduction` ou a entrada.
-
-### Compressão paralela
-
-1. Ajuste compressão mais forte que o necessário.
-2. Reduza `Mix` para reinserir o ataque.
-3. Ajuste `Output` para manter o volume comparável.
-
-## Ganho e segurança
-
-`Input`, `Gain` e `Output` podem somar bastante ganho. O plugin não possui limiter final. Reduza a monitoração antes de experimentar valores extremos e confira o medidor de pico da DAW.
-
-Os principais controles de ganho, mix, analog e sidechain têm suavização de cerca de 30 ms. Mudanças de modo e R37 são aplicadas por bloco.
-
-## Referência
-
-A função histórica do medidor foi conferida no [manual oficial do LA-2A da Universal Audio](https://help.uaudio.com/hc/en-us/articles/19378009641748-LA-2A-Tube-Compressor-Manual). As faixas, padrões, fluxo e limitações deste documento correspondem ao código atual do Borato LA-2A.
+Historical VU metering behavior cross-referenced against the official [Universal Audio LA-2A Manual](https://help.uaudio.com/hc/en-us/articles/19378009641748-LA-2A-Tube-Compressor-Manual). The ranges, defaults, flow, and limitations in this document correspond to the current codebase of the Borato LA-2A.
