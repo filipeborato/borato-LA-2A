@@ -27,6 +27,7 @@ public:
 
     void prepareToPlay(double sampleRate, int samplesPerBlock) override;
     void releaseResources() override {}
+    void reset() override;
     void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
     bool isBusesLayoutSupported(const BusesLayout&) const override;
 
@@ -56,6 +57,8 @@ public:
     float getGainReductionDb() const noexcept { return gainReductionDb.load(std::memory_order_relaxed); }
 
 private:
+    void pushParametersToCompressor();
+
     std::atomic<float>* inputTrimParam = nullptr;
     std::atomic<float>* gainParam = nullptr;
     std::atomic<float>* peakParam = nullptr;

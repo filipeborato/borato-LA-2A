@@ -76,17 +76,15 @@ Use higher settings to tame sibilance, harsh drum cymbals, or overly bright acou
 
 ### Current Borato LA-2A Metering Behavior
 
-The relative 6 dB offset between `+4` and `+10` is modeled accurately and switching modes does not alter audio processing. However, absolute digital calibration uses full-scale peak reference:
+Switching modes does not alter audio processing. Digital calibration follows the EBU R68 convention (`+4 dBu` ≙ `-18 dBFS`), so 0 VU corresponds to normal studio operating level:
 
-| Position | Internal Calculation | Current 0 VU Mark |
+| Position | Internal Calculation | 0 VU Mark |
 |---|---:|---:|
-| +4 | Output in dBFS | 0 dBFS |
-| +10 | Output in dBFS - 6 dB | +6 dBFS |
+| +4 | Output in dBFS + 18 dB | -18 dBFS |
+| +10 | Output in dBFS + 12 dB | -12 dBFS |
 | GR | Inverted Gain Reduction | 0 dB reduction |
 
-Example: With an output of `-12 dBFS`, `+4` indicates `-12` and `+10` indicates `-18`.
-
-In practice, use `GR` mode to monitor gain reduction and use your DAW peak/RMS meters for absolute output metering.
+Example: With an output of `-18 dBFS`, `+4` indicates `0 VU` and `+10` indicates `-6`.
 
 ### Meter Ballistics
 

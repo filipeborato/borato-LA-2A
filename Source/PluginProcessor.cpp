@@ -64,6 +64,29 @@ juce::AudioProcessorValueTreeState::ParameterLayout BoratoLA2AAudioProcessor::cr
 void BoratoLA2AAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
     optoCompressor.prepare(sampleRate, samplesPerBlock, getTotalNumOutputChannels());
+
+    // Empurra os valores atuais dos knobs e faz snap: sem isso o primeiro
+    // bloco faz ramp de 30 ms partindo dos defaults (burst de até 24 dB).
+    pushParametersToCompressor();
+    optoCompressor.snapParameters();
+}
+
+void BoratoLA2AAudioProcessor::reset()
+{
+    optoCompressor.reset();
+}
+
+void BoratoLA2AAudioProcessor::pushParametersToCompressor()
+{
+    optoCompressor.setInputTrimDb(inputTrimParam->load(std::memory_order_relaxed));
+    optoCompressor.setPeakReduction(peakParam->load(std::memory_order_relaxed));
+    optoCompressor.setMakeupGainDb(gainParam->load(std::memory_order_relaxed));
+    optoCompressor.setLimitMode(modeParam->load(std::memory_order_relaxed) >= 0.5f);
+    optoCompressor.setPowerOn(powerParam->load(std::memory_order_relaxed) >= 0.5f);
+    optoCompressor.setR37PreEmphasis(r37Param->load(std::memory_order_relaxed));
+    optoCompressor.setAnalogAmount(analogParam->load(std::memory_order_relaxed));
+    optoCompressor.setMix(mixParam->load(std::memory_order_relaxed) * 0.01f);
+    optoCompressor.setOutputTrimDb(outputParam->load(std::memory_order_relaxed));
 }
 
 void BoratoLA2AAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
@@ -75,26 +98,9 @@ void BoratoLA2AAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, ju
     for (int channel = inputChannels; channel < outputChannels; ++channel)
         buffer.clear(channel, 0, numSamples);
 
-    const bool powered = powerParam->load(std::memory_order_relaxed) >= 0.5f;
-    if (! powered)
-    {
-        // Power off: hard bypass. O VU ainda mostra o nível que passa.
-        float peak = 0.0f;
-        for (int channel = 0; channel < inputChannels; ++channel)
-            peak = juce::jmax(peak, buffer.getMagnitude(channel, 0, numSamples));
-        meterDb.store(juce::Decibels::gainToDecibels(peak, -60.0f), std::memory_order_relaxed);
-        gainReductionDb.store(0.0f, std::memory_order_relaxed);
-        return;
-    }
-
-    optoCompressor.setInputTrimDb(inputTrimParam->load(std::memory_order_relaxed));
-    optoCompressor.setPeakReduction(peakParam->load(std::memory_order_relaxed));
-    optoCompressor.setMakeupGainDb(gainParam->load(std::memory_order_relaxed));
-    optoCompressor.setLimitMode(modeParam->load(std::memory_order_relaxed) >= 0.5f);
-    optoCompressor.setR37PreEmphasis(r37Param->load(std::memory_order_relaxed));
-    optoCompressor.setAnalogAmount(analogParam->load(std::memory_order_relaxed));
-    optoCompressor.setMix(mixParam->load(std::memory_order_relaxed) * 0.01f);
-    optoCompressor.setOutputTrimDb(outputParam->load(std::memory_order_relaxed));
+    // Power off vira crossfade de ~20 ms dentro do compressor (sem clique);
+    // o VU segue mostrando o nível que passa e a GR decai a zero.
+    pushParametersToCompressor();
 
     optoCompressor.process(buffer);
 
