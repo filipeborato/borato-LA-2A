@@ -1,0 +1,6 @@
+# Design references (HTML/SVG/JS studies) must never count as project code in
+# GitHub's language stats. They are gitignored today; this keeps the stats
+# correct if any of them is ever committed on purpose.
+Assets/** linguist-vendored
+*.html linguist-vendored
+*.js linguist-vendored
