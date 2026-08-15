@@ -67,16 +67,13 @@ float T4OpticalCellModel::processSample(float targetLight) noexcept
     return fastWeight * fastCell + (1.0f - fastWeight) * slowCell;
 }
 
-float T4OpticalCellModel::lightToGainReductionDb(float light, bool limitMode) const noexcept
+float T4OpticalCellModel::lightToGainReductionDb(float light, float limitBlend) const noexcept
 {
     light = juce::jlimit(0.0f, 1.0f, light);
 
-    if (! limitMode)
-    {
-        // Compress: knee suave, menos profundidade para a mesma luz
-        return -compressMaxGrDb * (1.0f - std::exp(-compressCurveK * light));
-    }
-
-    // Limit: curva mais íngreme, mais redução para o mesmo Peak Reduction
-    return -limitMaxGrDb * (1.0f - std::exp(-limitCurveK * light));
+    // Compress: knee suave; Limit: curva mais íngreme, mais redução para o
+    // mesmo Peak Reduction. Interpoladas para o modo poder mudar sem clique.
+    const float grCompress = -compressMaxGrDb * (1.0f - std::exp(-compressCurveK * light));
+    const float grLimit    = -limitMaxGrDb    * (1.0f - std::exp(-limitCurveK    * light));
+    return grCompress + limitBlend * (grLimit - grCompress);
 }

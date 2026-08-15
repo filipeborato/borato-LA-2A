@@ -287,7 +287,8 @@ void La2aPanelComponent::timerCallback()
         if (selected == 2)
             db = -processor.getGainReductionDb();
         else
-            db = processor.getMeterDb() - (selected == 0 ? 6.0f : 0.0f);
+            // 0 VU = +4 dBu ≙ -18 dBFS (EBU R68); modo +10 lê 6 dB mais baixo
+            db = processor.getMeterDb() + 18.0f - (selected == 0 ? 6.0f : 0.0f);
     }
     meter.setDb(db);
     jewelLight.setOn(powered);

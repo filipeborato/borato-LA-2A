@@ -34,7 +34,9 @@ public:
     float processSample(float targetLight) noexcept;
 
     /// Curva luz → redução de ganho em dB (valor negativo quando reduz).
-    float lightToGainReductionDb(float light, bool limitMode) const noexcept;
+    /// limitBlend 0..1 interpola Compress → Limit (suavizado pelo chamador
+    /// para o toggle de modo não gerar degrau de até ~11 dB na GR).
+    float lightToGainReductionDb(float light, float limitBlend) const noexcept;
 
     /// O compressor informa a GR aplicada, alimentando a adaptação do release.
     void noteGainReductionDb(float grDb) noexcept { lastGainReductionDb = grDb; }

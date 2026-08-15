@@ -41,11 +41,17 @@ public:
     void setInputTrimDb(float db) noexcept;
     void setPeakReduction(float value0To100) noexcept;
     void setMakeupGainDb(float db) noexcept;
-    void setLimitMode(bool shouldLimit) noexcept   { limitMode = shouldLimit; }
+    void setLimitMode(bool shouldLimit) noexcept   { limitBlend.setTargetValue(shouldLimit ? 1.0f : 0.0f); }
+    void setPowerOn(bool on) noexcept              { powerAmount.setTargetValue(on ? 1.0f : 0.0f); }
     void setR37PreEmphasis(float value0To1) noexcept;
     void setAnalogAmount(float value0To1) noexcept;
     void setMix(float value0To1) noexcept;
     void setOutputTrimDb(float db) noexcept;
+
+    /// Faz os smoothers pularem direto para os alvos atuais. Chamar depois de
+    /// setar os parâmetros no prepareToPlay, para o primeiro bloco não fazer
+    /// ramp partindo dos defaults (burst de até 24 dB no start do transporte).
+    void snapParameters() noexcept;
 
     void process(juce::AudioBuffer<float>& buffer) noexcept;
 
@@ -79,6 +85,8 @@ private:
     static constexpr float grMeterMs           = 25.0f;  // suavização da GR para o VU
     static constexpr float vuMeterMs           = 200.0f; // envelope do nível de saída
     static constexpr float parameterSmoothingS = 0.03f;  // smoothing dos knobs
+    static constexpr float modeSmoothingS      = 0.05f;  // crossfade Compress⇄Limit
+    static constexpr float powerSmoothingS     = 0.02f;  // crossfade do power on/off
 
     T4OpticalCellModel t4;
     SidechainPreEmphasis r37FilterL, r37FilterR;
@@ -92,8 +100,9 @@ private:
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> mixAmount;
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> analogAmount;
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> sidechainDrive;
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> limitBlend;
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> powerAmount;
 
-    bool limitMode = false;
     float r37Amount = 0.35f;
 
     // Estado do sidechain / feedback

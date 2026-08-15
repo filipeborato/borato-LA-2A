@@ -35,6 +35,8 @@ void OptoCompressor::prepare(double newSampleRate, int, int newNumChannels)
     for (auto* smoothed : { &inputGain, &makeupGain, &outputGain,
                             &mixAmount, &analogAmount, &sidechainDrive })
         smoothed->reset(sampleRate, parameterSmoothingS);
+    limitBlend.reset(sampleRate, modeSmoothingS);
+    powerAmount.reset(sampleRate, powerSmoothingS);
 
     inputGain.setCurrentAndTargetValue(1.0f);
     makeupGain.setCurrentAndTargetValue(1.0f);
@@ -42,8 +44,17 @@ void OptoCompressor::prepare(double newSampleRate, int, int newNumChannels)
     mixAmount.setCurrentAndTargetValue(1.0f);
     analogAmount.setCurrentAndTargetValue(0.5f);
     sidechainDrive.setCurrentAndTargetValue(1.0f);
+    limitBlend.setCurrentAndTargetValue(0.0f);
+    powerAmount.setCurrentAndTargetValue(1.0f);
 
     reset();
+}
+
+void OptoCompressor::snapParameters() noexcept
+{
+    for (auto* smoothed : { &inputGain, &makeupGain, &outputGain, &mixAmount,
+                            &analogAmount, &sidechainDrive, &limitBlend, &powerAmount })
+        smoothed->setCurrentAndTargetValue(smoothed->getTargetValue());
 }
 
 void OptoCompressor::reset()
@@ -121,10 +132,15 @@ void OptoCompressor::process(juce::AudioBuffer<float>& buffer) noexcept
     {
         const float analog = analogAmount.getNextValue();
         const float trim = inputGain.getNextValue();
+        const float power = powerAmount.getNextValue();
+
+        // 0. Entrada crua guardada para o crossfade de power (bypass sem clique)
+        const float rawL = left[i];
+        const float rawR = stereo ? right[i] : rawL;
 
         // 1-3. Input trim + coloração do transformer/line amp de entrada
-        const float dryL = left[i] * trim;
-        const float dryR = stereo ? right[i] * trim : dryL;
+        const float dryL = rawL * trim;
+        const float dryR = stereo ? rawR * trim : dryL;
         float xL = inputStage.processSample(dryL, 0, analog);
         float xR = stereo ? inputStage.processSample(dryR, 1, analog) : xL;
 
@@ -141,9 +157,9 @@ void OptoCompressor::process(juce::AudioBuffer<float>& buffer) noexcept
         float targetLight = 1.0f - std::exp(-elPanelDrive * overdrive);
         targetLight = std::pow(juce::jmax(0.0f, targetLight), elGamma);
 
-        // 6-7. Memória do T4 e curva light → GR
+        // 6-7. Memória do T4 e curva light → GR (Compress⇄Limit interpolado)
         const float light = t4.processSample(targetLight);
-        const float grDb = t4.lightToGainReductionDb(light, limitMode);
+        const float grDb = t4.lightToGainReductionDb(light, limitBlend.getNextValue());
         t4.noteGainReductionDb(grDb);
         const float grLinear = dbToGainFast(grDb);
 
@@ -166,15 +182,17 @@ void OptoCompressor::process(juce::AudioBuffer<float>& buffer) noexcept
         // 12. Mix paralelo + output trim
         const float mix = mixAmount.getNextValue();
         const float outGain = outputGain.getNextValue();
-        const float outL = (dryL + mix * (wetL - dryL)) * outGain;
-        const float outR = (dryR + mix * (wetR - dryR)) * outGain;
+
+        // 13. Power: crossfade para a entrada crua (bypass total sem degrau)
+        const float outL = rawL + power * ((dryL + mix * (wetL - dryL)) * outGain - rawL);
+        const float outR = rawR + power * ((dryR + mix * (wetR - dryR)) * outGain - rawR);
 
         left[i] = outL;
         if (stereo)
             right[i] = outR;
 
-        // Medição: GR suavizada + envelope de nível de saída
-        grMeterDb += grMeterCoeff * (grDb - grMeterDb);
+        // Medição: GR suavizada (zerada com power off) + envelope de saída
+        grMeterDb += grMeterCoeff * (grDb * power - grMeterDb);
         const float outAbs = juce::jmax(std::abs(outL), std::abs(outR));
         vuEnvelope += vuCoeff * (outAbs - vuEnvelope);
     }
