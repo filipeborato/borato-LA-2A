@@ -1,6 +1,9 @@
 # Custom Python Scripts (one-off/scratch tools, not real tests)
 tests/scratch/
 
+# Design references (mockups, HTML/SVG studies) - local only, not shipped
+Assets/
+
 .venv/
 __pycache__/
 .pytest_cache/

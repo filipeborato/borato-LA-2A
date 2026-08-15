@@ -2,19 +2,8 @@ name: Build Release Artifacts
 
 on:
   push:
-    branches:
-      - main
-      - master
-      - release
-      - "release/**"
-      - "ci/**"
     tags:
       - "v*"
-  pull_request:
-    branches:
-      - main
-      - master
-  workflow_dispatch:
 
 permissions:
   contents: write
