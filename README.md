@@ -2,16 +2,18 @@
 
 ![Borato LA-2A Plugin Interface](screenshot.png)
 
-A high-performance **Teletronix LA-2A** optical compressor emulator (VST3/Standalone) built with **C++20**, **JUCE 8**, and **CMake**. 
+A **Teletronix LA-2A** optical compressor emulator (VST3 / Standalone) written in **C++20** with **JUCE 8** and **CMake**.
 
-Featuring an authentic vintage hardware panel interface rendered 100% procedurally with native `juce::Graphics` — zero WebView, HTML, JavaScript, or SVG runtime overhead.
+The vintage hardware panel is drawn at runtime with `juce::Graphics` — every knob, screw, switch and the VU meter are native C++ paint code, with no image assets loaded by the plugin.
 
 ## Features
 
-- **Authentic LA-2A Emulation**: Faithfully models the program-dependent optical gain reduction, two-stage release curve, and subtle tube saturation/analog warmth of the classic Teletronix LA-2A leveling amplifier.
-- **100% Procedural Vector UI**: High-resolution GUI rendered entirely in real-time via `juce::Graphics` (brushed metal, aging patina, dynamic reflections, vintage knobs, VU meter, and interactive switches).
-- **Zero Web Tech Runtime Overhead**: Built purely with native C++20 and JUCE components.
-- **Cross-Platform & Generator-Agnostic**: Clean CMake configuration for Windows (Visual Studio 2022 / 2026), macOS, and Linux.
+- **Optical compression model**: program-dependent gain reduction through a T4-style cell, two-stage release, and a feedback sidechain tapped after the compressor and before makeup gain.
+- **Compress / Limit modes**: soft knee up to ~24 dB of modeled reduction, or a steeper knee up to ~32 dB.
+- **R37 HF sensitivity**: sidechain high-shelf emphasis (up to ~+10 dB near 1.8 kHz) to tame sibilance without EQing the audio path.
+- **Analog stage and Mix**: variable tube/transformer coloration plus a dry/wet blend for parallel compression.
+- **Procedurally drawn UI**: brushed metal, patina, reflections, vintage knobs, VU meter and switches, all painted in C++.
+- **Cross-platform CMake**: Windows (Visual Studio 2022 / 2026), macOS and Linux, with no hardcoded toolset.
 
 ## Requirements
 
@@ -143,6 +145,13 @@ This DSP behavior is validated by regression tests loading the VST3 Release bina
 ```
 
 *Note: Requires `pytest`, `numpy`, and `pedalboard`. Automatically skipped if the VST3 Release binary is not built.*
+
+## Releases
+
+Pushing a `v*` tag runs the multi-OS workflow (Windows x64, macOS arm64/Intel,
+Ubuntu) and attaches the VST3 bundles to a draft GitHub Release. Pull requests
+run a single Ubuntu build only. The release version is read from the
+`project(BoratoLA2A VERSION ...)` line in `CMakeLists.txt`.
 
 ## Documentation
 
